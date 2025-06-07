@@ -12,6 +12,10 @@ RUN npm install --production
 # Bundle app source
 COPY . .
 
+# Install dos2unix to fix line endings for shell scripts
+RUN apk add --no-cache dos2unix \
+    && find . -type f -name "*.sh" -exec dos2unix {} +
+
 # Expose the port the app runs on
 EXPOSE 8002
 
