@@ -3,6 +3,10 @@ version: '3'
 services:
   wol-service:
     image: ${DOCKER_IMAGE:-ghcr.io/lamarquenet/wol-service:latest}
+    platforms:
+        - linux/amd64
+        - linux/arm64
+        - linux/arm/v7
     container_name: wol-service
     restart: unless-stopped
     ports:
