@@ -2,7 +2,7 @@ version: '3'
 
 services:
   wol-service:
-    image: ${DOCKER_IMAGE:-ghcr.io/username/wol-service:latest}
+    image: ${DOCKER_IMAGE:-ghcr.io/lamarquenet/wol-service:latest}
     container_name: wol-service
     restart: always
     ports:
