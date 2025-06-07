@@ -25,15 +25,15 @@ docker-compose up -d
 ```bash
 docker run -d \
   --name wol-service \
-  --restart always \
+  --restart unless-stopped \
   -p 8002:8002 \
   -e WOL_SERVICE_PORT=8002 \
   -e SERVER_MAC=XX:XX:XX:XX:XX:XX \
   -e WOL_BROADCAST_ADDR=192.168.1.255 \
-  ghcr.io/username/wol-service:latest
+  ghcr.io/lamarquenet/wol-service:latest
 ```
 
-Replace `username` with your GitHub username and `XX:XX:XX:XX:XX:XX` with your server's MAC address.
+Replace `XX:XX:XX:XX:XX:XX` with your server's MAC address.
 
 ## API Endpoints
 
@@ -85,7 +85,16 @@ To use it:
 1. Make sure your repository has the necessary permissions to publish packages.
 2. Push your changes to the main branch or create a tag.
 3. The workflow will build and publish the Docker image to GHCR.
-4. You can then pull the image using `docker pull ghcr.io/username/wol-service:latest`.
+4. You can then pull the image using `docker pull ghcr.io/lamarquenet/wol-service:latest`.
+
+## Multi-Architecture Support
+
+The Docker image is built for multiple architectures:
+- linux/amd64 (standard 64-bit x86 systems)
+- linux/arm64 (64-bit ARM systems like Raspberry Pi 4 with 64-bit OS)
+- linux/arm/v7 (32-bit ARM systems like Raspberry Pi 3 and earlier)
+
+This ensures the service can run on various devices, from standard servers to small single-board computers.
 
 ## Environment Variables
 
