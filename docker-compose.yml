@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  wol-service:
+    image: ${DOCKER_IMAGE:-ghcr.io/username/wol-service:latest}
+    container_name: wol-service
+    restart: always
+    ports:
+      - "${WOL_SERVICE_PORT:-8002}:${WOL_SERVICE_PORT:-8002}"
+    environment:
+      - WOL_SERVICE_PORT=${WOL_SERVICE_PORT:-8002}
+      - SERVER_MAC=${SERVER_MAC}
+      - WOL_BROADCAST_ADDR=${WOL_BROADCAST_ADDR:-}
+    networks:
+      - wol-network
+
+networks:
+  wol-network:
+    driver: bridge
