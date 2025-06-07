@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM node:23-alpine
+FROM --platform=$TARGETPLATFORM node:23-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
