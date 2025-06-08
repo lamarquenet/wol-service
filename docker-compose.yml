@@ -21,7 +21,3 @@ services:
       - DOCKER_IMAGE=true
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-networks:
-  stats-network:
-    driver: bridge
