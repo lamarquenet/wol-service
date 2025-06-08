@@ -9,14 +9,18 @@ services:
         - linux/arm/v7
     container_name: wol-service
     restart: unless-stopped
+    # Use host network mode to allow broadcast packets to reach the physical network
+    network_mode: host
+    # Keep ports for documentation, though not needed with host network mode
     ports:
       - "${WOL_SERVICE_PORT:-8002}:${WOL_SERVICE_PORT:-8002}"
     environment:
       - WOL_SERVICE_PORT=${WOL_SERVICE_PORT:-8002}
-      - SERVER_MAC=${SERVER_MAC}
-      - WOL_BROADCAST_ADDR=${WOL_BROADCAST_ADDR:-}
-    networks:
-      - stats-network
+      - SERVER_MAC=${SERVER_MAC:-10:7B:44:93:F0:CD}
+      - WOL_BROADCAST_ADDR=${WOL_BROADCAST_ADDR:-192.168.8.255}
+      - DOCKER_IMAGE=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   stats-network:
