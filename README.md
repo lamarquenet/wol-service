@@ -1,105 +1,105 @@
-# Wake-on-LAN Service
+# WOL Service
 
-A lightweight Wake-on-LAN service for server administration dashboard. This service runs separately from the main server and is responsible for sending Wake-on-LAN packets to wake up the main server.
+Lightweight Wake-on-LAN service. Deployed on **piserver (192.168.8.170)** to wake up **aiserver (192.168.8.209)** when it's sleeping.
 
-## Docker Deployment
-
-### Using Docker Compose (Recommended)
-
-1. Create a `.env` file with your configuration:
+## Deployment Location
 
 ```
-WOL_SERVICE_PORT=8002
-SERVER_MAC=XX:XX:XX:XX:XX:XX  # Replace with your server's MAC address
-WOL_BROADCAST_ADDR=192.168.1.255  # Optional: Your network's broadcast address
+┌─────────────────────────────────────────────────────────────────┐
+│                    piserver (192.168.8.170)                     │
+│                     Raspberry Pi - Always On                    │
+│                                                                 │
+│  Docker:                                                        │
+│  └── wol-service:8002 (host network mode)                      │
+│          └── Sends WOL packet to aiserver MAC                  │
+└─────────────────────────────────────────────────────────────────┘
+         │
+         │ WOL Magic Packet (Broadcast: 192.168.8.255)
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    aiserver (192.168.8.209)                     │
+│                    [Sleeping ───► Wakes up]                     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-2. Run the service:
+The dashboard calls this service to wake aiserver so the stats-server can start.
 
-```bash
-docker-compose up -d
-```
+## How It Works
 
-### Using Docker directly
-
-```bash
-docker run -d \
-  --name wol-service \
-  --restart unless-stopped \
-  -p 8002:8002 \
-  -e WOL_SERVICE_PORT=8002 \
-  -e SERVER_MAC=XX:XX:XX:XX:XX:XX \
-  -e WOL_BROADCAST_ADDR=192.168.1.255 \
-  ghcr.io/lamarquenet/wol-service:latest
-```
-
-Replace `XX:XX:XX:XX:XX:XX` with your server's MAC address.
+1. Dashboard sends `POST /wakeup` to piserver:8002
+2. WOL service creates magic packet with aiserver's MAC
+3. Packet broadcast to network (192.168.8.255)
+4. aiserver receives packet and wakes up
+5. stats-server auto-starts on aiserver
 
 ## API Endpoints
 
-- `GET /health`: Health check endpoint
-- `POST /wakeup`: Send Wake-on-LAN packet
-  - Request body: `{ "macAddress": "XX:XX:XX:XX:XX:XX" }` (optional if SERVER_MAC is set)
+### POST /wakeup
 
-## Setting up as a System Service
+Send Wake-on-LAN packet.
 
-### Using systemd (Linux)
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Wake-on-LAN packet sent to 10:7B:44:93:F0:CD"
+}
+```
 
-1. Create a systemd service file:
+### GET /health
+
+Health check.
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WOL_SERVICE_PORT` | 8002 | Service port |
+| `SERVER_MAC` | 10:7B:44:93:F0:CD | aiserver MAC address |
+| `WOL_BROADCAST_ADDR` | 192.168.8.255 | Network broadcast address |
+
+### Docker Compose (piserver)
+
+```yaml
+services:
+  wol-service:
+    image: ghcr.io/lamarquenet/wol-service:latest
+    container_name: wol-service
+    platform: linux/arm64
+    restart: unless-stopped
+    network_mode: "host"  # Required for broadcast
+    environment:
+      - WOL_SERVICE_PORT=8002
+      - SERVER_MAC=10:7B:44:93:F0:CD
+      - WOL_BROADCAST_ADDR=192.168.8.255
+```
+
+> **Note:** `network_mode: "host"` is required to send broadcast packets.
+
+## aiserver WOL Setup
+
+The aiserver needs Wake-on-LAN enabled:
 
 ```bash
-sudo nano /etc/systemd/system/wol-service.service
+# On aiserver
+sudo apt install ethtool
+
+# Find network interface
+ip link show
+
+# Enable WOL (replace eth0)
+sudo ethtool -s eth0 wol g
+
+# Make persistent (add to /etc/network/interfaces)
+# post-up /usr/sbin/ethtool -s eth0 wol g
 ```
 
-2. Add the following content:
+## Related Repositories
 
-```
-[Unit]
-Description=Wake-on-LAN Service
-After=docker.service
-Requires=docker.service
-
-[Service]
-Restart=always
-ExecStart=/usr/bin/docker-compose -f /path/to/docker-compose.yml up
-ExecStop=/usr/bin/docker-compose -f /path/to/docker-compose.yml down
-WorkingDirectory=/path/to/wol-service
-
-[Install]
-WantedBy=multi-user.target
-```
-
-3. Enable and start the service:
-
-```bash
-sudo systemctl enable wol-service
-sudo systemctl start wol-service
-```
-
-## GitHub Actions
-
-This repository includes a GitHub Actions workflow that automatically builds and publishes a Docker image to GitHub Container Registry (GHCR) when you push to the main branch or create a tag.
-
-To use it:
-
-1. Make sure your repository has the necessary permissions to publish packages.
-2. Push your changes to the main branch or create a tag.
-3. The workflow will build and publish the Docker image to GHCR.
-4. You can then pull the image using `docker pull ghcr.io/lamarquenet/wol-service:latest`.
-
-## Multi-Architecture Support
-
-The Docker image is built for multiple architectures:
-- linux/amd64 (standard 64-bit x86 systems)
-- linux/arm64 (64-bit ARM systems like Raspberry Pi 4 with 64-bit OS)
-- linux/arm/v7 (32-bit ARM systems like Raspberry Pi 3 and earlier)
-
-This ensures the service can run on various devices, from standard servers to small single-board computers.
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| WOL_SERVICE_PORT | Port for the WoL service to listen on | 8002 |
-| SERVER_MAC | MAC address of the server to wake up | - |
-| WOL_BROADCAST_ADDR | Broadcast address for the Wake-on-LAN packet | - |
+| Repo | Location | IP | Purpose |
+|------|----------|-----|---------|
+| server-admin-dashboard | piserver | 192.168.8.170 | React frontend |
+| wol-service | **piserver** | 192.168.8.170 | This WOL service |
+| stats-server | aiserver | 192.168.8.209 | Backend API |
